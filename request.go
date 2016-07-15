@@ -22,16 +22,22 @@ type request struct {
 	Action               string             `json:"action"`
 }
 
-func (s *Scheduler) manageRequest(body []byte, to string) {
+func (s *Scheduler) manageRequest(inputBody []byte, from, to string) {
 	req := request{}
-	if err := json.Unmarshal(body, &req); err != nil {
-		log.Println("Error unmarshalling request: " + string(body))
+	if err := json.Unmarshal(inputBody, &req); err != nil {
+		log.Println("Error unmarshalling request: " + string(inputBody))
 		return
 	}
+
+	if req.Status == "completed" {
+		s.N.Publish(from+".done", inputBody)
+		return
+	}
+
 	batchID := uuid.NewV4()
 
 	for i, c := range req.Components {
-		req.Components[i] = s.identifyComponent(*c, batchID)
+		req.Components[i] = s.identifyComponent(*c, batchID, req)
 	}
 
 	body, err := json.Marshal(req)
@@ -41,21 +47,31 @@ func (s *Scheduler) manageRequest(body []byte, to string) {
 	}
 	s.R.Set(batchID.String(), string(body), 0)
 
+	somethingToProcess := false
 	for _, c := range req.Components {
-		s.publishNext(to, c)
-		if req.SequentialProcessing == true {
-			break
+		if s.readyToBeProcessed(c) == true {
+			somethingToProcess = true
+			s.publishNext(to, c)
+			if req.SequentialProcessing == true {
+				break
+			}
 		}
+	}
+
+	if somethingToProcess == false {
+		s.N.Publish(from+".done", inputBody)
+		return
 	}
 }
 
-func (s *Scheduler) identifyComponent(c json.RawMessage, batchID uuid.UUID) *json.RawMessage {
+func (s *Scheduler) identifyComponent(c json.RawMessage, batchID uuid.UUID, req request) *json.RawMessage {
 	dec := json.NewDecoder(bytes.NewReader(c))
 	var a map[string]interface{}
 	dec.Decode(&a)
 
 	a["_batch_id"] = batchID
 	a["_uuid"] = uuid.NewV4()
+	a["service"] = req.Service
 	b, err := json.Marshal(a)
 	if err != nil {
 		log.Println("An error occurred processing the input json: " + string(c))
@@ -64,6 +80,22 @@ func (s *Scheduler) identifyComponent(c json.RawMessage, batchID uuid.UUID) *jso
 	m := json.RawMessage(b)
 
 	return &m
+}
+
+func (s *Scheduler) readyToBeProcessed(c *json.RawMessage) bool {
+	dec := json.NewDecoder(bytes.NewReader(*c))
+	var a map[string]interface{}
+	dec.Decode(&a)
+
+	if a["status"] == nil {
+		return true
+	}
+
+	if a["status"].(string) != "completed" {
+		return true
+	}
+
+	return false
 }
 
 func (s *Scheduler) publishNext(to string, component *json.RawMessage) {

@@ -32,7 +32,7 @@ type response struct {
 
 func (s *Scheduler) ProcessRequest(from string, to string) {
 	s.N.Subscribe(from, func(m *nats.Msg) {
-		s.manageRequest(m.Data, to)
+		s.manageRequest(m.Data, from, to)
 	})
 }
 
