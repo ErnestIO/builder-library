@@ -40,17 +40,13 @@ func (s *Scheduler) manageRequest(inputBody []byte, from, to string) {
 		req.Components[i] = s.identifyComponent(*c, batchID, req)
 	}
 
-	body, err := json.Marshal(req)
-	if err != nil {
-		log.Println("Error marshalling result: " + string(body))
-		return
-	}
-	s.R.Set(batchID.String(), string(body), 0)
-
 	somethingToProcess := false
-	for _, c := range req.Components {
+	for i, c := range req.Components {
 		if s.readyToBeProcessed(c) == true {
 			somethingToProcess = true
+			// TODO update status as in progress
+			c = s.markAs(*c, "processing")
+			req.Components[i] = c
 			s.publishNext(to, c)
 			if req.SequentialProcessing == true {
 				break
@@ -58,10 +54,31 @@ func (s *Scheduler) manageRequest(inputBody []byte, from, to string) {
 		}
 	}
 
+	body, err := json.Marshal(req)
+	if err != nil {
+		log.Println("Error marshalling result: " + string(body))
+		return
+	}
+	s.R.Set(batchID.String(), string(body), 0)
+
 	if somethingToProcess == false {
 		s.N.Publish(from+".done", inputBody)
 		return
 	}
+}
+func (s *Scheduler) markAs(c json.RawMessage, status string) *json.RawMessage {
+	dec := json.NewDecoder(bytes.NewReader(c))
+	var a map[string]interface{}
+	dec.Decode(&a)
+	a["status"] = status
+
+	b, err := json.Marshal(a)
+	if err != nil {
+		log.Println("An error occurred processing the input json: " + string(c))
+	}
+
+	m := json.RawMessage(b)
+	return &m
 }
 
 func (s *Scheduler) identifyComponent(c json.RawMessage, batchID uuid.UUID, req request) *json.RawMessage {
