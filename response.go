@@ -23,6 +23,16 @@ func (s *Scheduler) updateFromResponse(body []byte) request {
 	for i, c := range req.Components {
 		sc := s.mapJson(c)
 		if sc["_uuid"] == res["_uuid"] {
+			for k, v := range res {
+				if w, ok := v.(string); ok {
+					if w != "" {
+						sc[k] = v
+					}
+				} else {
+					sc[k] = v
+				}
+			}
+			body, _ := json.Marshal(sc)
 			b := json.RawMessage(body)
 			req.Components[i] = &b
 		}
