@@ -5,54 +5,31 @@
 package scheduler
 
 import (
-	"encoding/json"
-	"log"
-	"time"
-
+	ecc "github.com/ernestio/ernest-config-client"
 	"github.com/nats-io/nats"
 	"gopkg.in/redis.v3"
 )
 
 func (s *Scheduler) Setup(n string) {
-	if n == "" {
-		n = nats.DefaultURL
-	}
-
-	s.natsURI = n
+	s.configSetup(n)
 	s.N = s.natsClient()
 	s.R = s.redisClient()
 }
 
-func (s *Scheduler) natsClient() *nats.Conn {
-	n, err := nats.Connect(s.natsURI)
-	if err != nil {
-		log.Println("Could not connect to NATS server")
-		panic(err)
-	}
+func (s *Scheduler) configSetup(n string) {
+	s.C = ecc.NewConfig(n)
+}
 
-	return n
+func (s *Scheduler) natsClient() *nats.Conn {
+	if s.C == nil {
+		s.configSetup(s.natsURI)
+	}
+	return s.C.Nats()
 }
 
 func (s *Scheduler) redisClient() *redis.Client {
-	var cfg struct {
-		Addr     string `json:"addr"`
-		Password string `json:"password"`
-		DB       int64  `json:"DB"`
+	if s.C == nil {
+		s.configSetup(s.natsURI)
 	}
-
-	resp, err := s.N.Request("config.get.redis", nil, time.Second)
-	if err != nil {
-		log.Println("could not load config")
-		log.Panic(err)
-	}
-
-	err = json.Unmarshal(resp.Data, &cfg)
-	if err != nil {
-		log.Panic(err)
-	}
-	return redis.NewClient(&redis.Options{
-		Addr:     cfg.Addr,
-		Password: cfg.Password,
-		DB:       cfg.DB,
-	})
+	return s.C.Redis()
 }

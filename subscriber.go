@@ -7,12 +7,14 @@ package scheduler
 import (
 	"encoding/json"
 
+	ecc "github.com/ernestio/ernest-config-client"
 	"github.com/nats-io/nats"
 	"gopkg.in/redis.v3"
 )
 
 type Scheduler struct {
 	natsURI string
+	C       *ecc.Config
 	R       *redis.Client
 	N       *nats.Conn
 }
