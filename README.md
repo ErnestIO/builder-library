@@ -16,7 +16,7 @@ Once all of them are fully processed it will emit back a message 'component.proc
 
 ## Build status
 
-* master: [![CircleCI](https://circleci.com/gh/ErnestIO/builder-library/tree/master.svg?style=svg)](https://circleci.com/gh/ErnestIO/builder-library/tree/master)
+* master: [![CircleCI](https://circleci.com/gh/ernestio/builder-library/tree/master.svg?style=svg)](https://circleci.com/gh/ernestio/builder-library/tree/master)
 
 ## Installation
 
