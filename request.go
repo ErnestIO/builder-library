@@ -16,7 +16,7 @@ type request struct {
 	Service              string             `json:"service"`
 	Status               string             `json:"status"`
 	ErrorCode            string             `json:"error_code"`
-	ErrorMessage         string             `json:"error_message"`
+	ErrorMessage         string             `json:"error"`
 	Components           []*json.RawMessage `json:"components"`
 	SequentialProcessing bool               `json:"sequential_processing"`
 	Action               string             `json:"action"`
