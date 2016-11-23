@@ -8,7 +8,7 @@ machine:
 dependencies:
   pre:
     - docker run -d -p 4222:4222 nats
-    - make deps
+    - make dev-deps
 
 test:
   override:

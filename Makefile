@@ -14,11 +14,11 @@ test:
 cover:
 	go test -v ./... --cover
 
-deps: dev-deps
+deps:
 	go get -u github.com/nats-io/nats
 	go get -u gopkg.in/redis.v3
 
-dev-deps:
-	go get -u github.com/golang/lint/golint
+dev-deps: deps
+	go get -u github.com/golang/golint
 
 ci-deps:
