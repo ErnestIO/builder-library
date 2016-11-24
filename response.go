@@ -66,6 +66,25 @@ func (s *Scheduler) isAllDone(req request) bool {
 	return true
 }
 
+func (s *Scheduler) isFinished(req *request) bool {
+	if req.SequentialProcessing == true {
+		for _, c := range req.Components {
+			m := s.mapJson(c)
+			if m["status"] == "" || m["status"] == "processing" {
+				m["status"] = "errored"
+			}
+		}
+		return true
+	}
+	for _, c := range req.Components {
+		m := s.mapJson(c)
+		if m["status"] != "errored" && m["status"] != "completed" {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Scheduler) processNext(req request) *json.RawMessage {
 	for _, c := range req.Components {
 		sc := s.mapJson(c)
@@ -96,9 +115,11 @@ func (s *Scheduler) areAllProcessed() {
 
 func (s *Scheduler) manageFailedResponse(body []byte, to string) {
 	req := s.updateFromResponse(body)
-	if body, err := json.Marshal(req); err != nil {
-		log.Println(err.Error())
-	} else {
-		s.N.Publish(to, body)
+	if s.isFinished(&req) == true {
+		if body, err := json.Marshal(req); err != nil {
+			log.Println(err.Error())
+		} else {
+			s.N.Publish(to, body)
+		}
 	}
 }

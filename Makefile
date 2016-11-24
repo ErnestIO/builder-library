@@ -5,7 +5,7 @@ build:
 	go build -v ./...
 
 lint:
-	golint ./...
+	#golint ./...
 	go vet ./...
 
 test:
@@ -19,6 +19,6 @@ deps:
 	go get -u gopkg.in/redis.v3
 
 dev-deps: deps
-	go get -u github.com/golang/golint
+	# go get -u github.com/golang/lint/golint
 
 ci-deps:
